@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, GithubAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, doc, setDoc, getDoc, query, where, getDocs, deleteDoc, orderBy } from 'firebase/firestore';
+import { getFirestore, collection, doc, setDoc, query, getDocs, deleteDoc, orderBy } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: "AIzaSyA8NNUo5f4c3y4IAiTY-qzgRwsV5Zc0Kz0",
@@ -12,49 +12,41 @@ const firebaseConfig = {
   measurementId: "G-37JDSBDN4T"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
 
-// Auth providers
-export const googleProvider = new GoogleAuthProvider();
-export const githubProvider = new GithubAuthProvider();
+let auth;
+let db;
 
-/**
- * Sign in with Google
- */
+function getAuthInstance() {
+  if (!auth) auth = getAuth(app);
+  return auth;
+}
+
+function getDbInstance() {
+  if (!db) db = getFirestore(app);
+  return db;
+}
+
 export const signInWithGoogle = () => {
-  return signInWithPopup(auth, googleProvider);
+  return signInWithPopup(getAuthInstance(), new GoogleAuthProvider());
 };
 
-/**
- * Sign in with GitHub
- */
 export const signInWithGithub = () => {
-  return signInWithPopup(auth, githubProvider);
+  return signInWithPopup(getAuthInstance(), new GithubAuthProvider());
 };
 
-/**
- * Sign out current user
- */
 export const logOut = () => {
-  return signOut(auth);
+  return signOut(getAuthInstance());
 };
 
-/**
- * Listen to auth state changes
- */
 export const onAuthChange = (callback) => {
-  return onAuthStateChanged(auth, callback);
+  return onAuthStateChanged(getAuthInstance(), callback);
 };
 
-/**
- * Save calculation to Firestore
- */
 export const saveCalculation = async (userId, calculation) => {
   try {
-    const calcRef = doc(collection(db, 'users', userId, 'calculations'), calculation.id || Date.now().toString());
+    const calcDb = getDbInstance();
+    const calcRef = doc(collection(calcDb, 'users', userId, 'calculations'), calculation.id || Date.now().toString());
     await setDoc(calcRef, {
       ...calculation,
       timestamp: calculation.timestamp || Date.now(),
@@ -66,43 +58,25 @@ export const saveCalculation = async (userId, calculation) => {
   }
 };
 
-/**
- * Get all calculations for current user
- */
 export const getCalculations = async (userId) => {
   try {
-    const calcsRef = collection(db, 'users', userId, 'calculations');
+    const calcDb = getDbInstance();
+    const calcsRef = collection(calcDb, 'users', userId, 'calculations');
     const q = query(calcsRef, orderBy('timestamp', 'desc'));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
   } catch (error) {
     console.error('Error fetching calculations:', error);
     return [];
   }
 };
 
-/**
- * Delete a calculation
- */
 export const deleteCalculation = async (userId, calcId) => {
   try {
-    await deleteDoc(doc(db, 'users', userId, 'calculations', calcId));
+    const calcDb = getDbInstance();
+    await deleteDoc(doc(calcDb, 'users', userId, 'calculations', calcId));
   } catch (error) {
     console.error('Error deleting calculation:', error);
-    throw error;
-  }
-};
-
-/**
- * Sync local history to cloud
- */
-export const syncHistoryToCloud = async (userId, localHistory) => {
-  try {
-    for (const entry of localHistory) {
-      await saveCalculation(userId, entry);
-    }
-  } catch (error) {
-    console.error('Error syncing history:', error);
     throw error;
   }
 };
