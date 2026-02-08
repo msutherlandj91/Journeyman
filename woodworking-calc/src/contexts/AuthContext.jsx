@@ -8,17 +8,22 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    try {
-      const unsubscribe = onAuthChange((currentUser) => {
-        setUser(currentUser);
-        setLoading(false);
-      });
+    let unsubscribe = null;
 
-      return () => unsubscribe();
-    } catch (error) {
+    // onAuthChange is now async, so we need to handle it
+    onAuthChange((currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    }).then((unsub) => {
+      unsubscribe = unsub;
+    }).catch((error) => {
       console.error('Firebase auth error:', error);
       setLoading(false);
-    }
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
   const logout = async () => {

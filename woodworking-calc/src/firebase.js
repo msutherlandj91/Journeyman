@@ -1,7 +1,3 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, GithubAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, doc, setDoc, query, getDocs, deleteDoc, orderBy } from 'firebase/firestore';
-
 const firebaseConfig = {
   apiKey: "AIzaSyA8NNUo5f4c3y4IAiTY-qzgRwsV5Zc0Kz0",
   authDomain: "journeyman-calc.firebaseapp.com",
@@ -12,41 +8,65 @@ const firebaseConfig = {
   measurementId: "G-37JDSBDN4T"
 };
 
-const app = initializeApp(firebaseConfig);
+let _app = null;
+let _auth = null;
+let _db = null;
 
-let auth;
-let db;
-
-function getAuthInstance() {
-  if (!auth) auth = getAuth(app);
-  return auth;
+async function getApp() {
+  if (!_app) {
+    const { initializeApp } = await import('firebase/app');
+    _app = initializeApp(firebaseConfig);
+  }
+  return _app;
 }
 
-function getDbInstance() {
-  if (!db) db = getFirestore(app);
-  return db;
+async function getAuthInstance() {
+  if (!_auth) {
+    const app = await getApp();
+    const { getAuth } = await import('firebase/auth');
+    _auth = getAuth(app);
+  }
+  return _auth;
 }
 
-export const signInWithGoogle = () => {
-  return signInWithPopup(getAuthInstance(), new GoogleAuthProvider());
+async function getDbInstance() {
+  if (!_db) {
+    const app = await getApp();
+    const { getFirestore } = await import('firebase/firestore');
+    _db = getFirestore(app);
+  }
+  return _db;
+}
+
+export const signInWithGoogle = async () => {
+  const auth = await getAuthInstance();
+  const { GoogleAuthProvider, signInWithPopup } = await import('firebase/auth');
+  return signInWithPopup(auth, new GoogleAuthProvider());
 };
 
-export const signInWithGithub = () => {
-  return signInWithPopup(getAuthInstance(), new GithubAuthProvider());
+export const signInWithGithub = async () => {
+  const auth = await getAuthInstance();
+  const { GithubAuthProvider, signInWithPopup } = await import('firebase/auth');
+  return signInWithPopup(auth, new GithubAuthProvider());
 };
 
-export const logOut = () => {
-  return signOut(getAuthInstance());
+export const logOut = async () => {
+  const auth = await getAuthInstance();
+  const { signOut } = await import('firebase/auth');
+  return signOut(auth);
 };
 
-export const onAuthChange = (callback) => {
-  return onAuthStateChanged(getAuthInstance(), callback);
+export const onAuthChange = async (callback) => {
+  const auth = await getAuthInstance();
+  const { onAuthStateChanged } = await import('firebase/auth');
+  return onAuthStateChanged(auth, callback);
 };
 
 export const saveCalculation = async (userId, calculation) => {
   try {
-    const calcDb = getDbInstance();
-    const calcRef = doc(collection(calcDb, 'users', userId, 'calculations'), calculation.id || Date.now().toString());
+    const db = await getDbInstance();
+    const { collection, doc, setDoc } = await import('firebase/firestore');
+    const calcRef = doc(collection(db, 'users', userId, 'calculations'), calculation.id || Date.now().toString());
     await setDoc(calcRef, {
       ...calculation,
       timestamp: calculation.timestamp || Date.now(),
@@ -60,8 +80,9 @@ export const saveCalculation = async (userId, calculation) => {
 
 export const getCalculations = async (userId) => {
   try {
-    const calcDb = getDbInstance();
-    const calcsRef = collection(calcDb, 'users', userId, 'calculations');
+    const db = await getDbInstance();
+    const { collection, query, getDocs, orderBy } = await import('firebase/firestore');
+    const calcsRef = collection(db, 'users', userId, 'calculations');
     const q = query(calcsRef, orderBy('timestamp', 'desc'));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -73,8 +94,9 @@ export const getCalculations = async (userId) => {
 
 export const deleteCalculation = async (userId, calcId) => {
   try {
-    const calcDb = getDbInstance();
-    await deleteDoc(doc(calcDb, 'users', userId, 'calculations', calcId));
+    const db = await getDbInstance();
+    const { doc, deleteDoc } = await import('firebase/firestore');
+    await deleteDoc(doc(db, 'users', userId, 'calculations', calcId));
   } catch (error) {
     console.error('Error deleting calculation:', error);
     throw error;
