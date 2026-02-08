@@ -8,12 +8,17 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthChange((currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-    });
+    try {
+      const unsubscribe = onAuthChange((currentUser) => {
+        setUser(currentUser);
+        setLoading(false);
+      });
 
-    return () => unsubscribe();
+      return () => unsubscribe();
+    } catch (error) {
+      console.error('Firebase auth error:', error);
+      setLoading(false);
+    }
   }, []);
 
   const logout = async () => {

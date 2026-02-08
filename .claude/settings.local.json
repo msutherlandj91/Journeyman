@@ -21,7 +21,8 @@
       "Bash(curl:*)",
       "Bash(npm run build:*)",
       "Bash(git clone:*)",
-      "Bash(gh run view:*)"
+      "Bash(gh run view:*)",
+      "WebFetch(domain:localhost)"
     ]
   }
 }
