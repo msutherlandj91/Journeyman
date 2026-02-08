@@ -146,9 +146,9 @@ function App() {
   const saveToCloud = useCallback(async (entry) => {
     if (user) {
       try {
-        await saveCalculation(user.uid, entry);
+        await saveCalculation(user.id, entry);
         // Reload cloud history
-        const calcs = await getCalculations(user.uid);
+        const calcs = await getCalculations(user.id);
         setCloudHistory(calcs);
       } catch (error) {
         console.error('Error saving to cloud:', error);
@@ -242,7 +242,7 @@ function App() {
     if (user && !authLoading) {
       const loadCloudHistory = async () => {
         try {
-          const calcs = await getCalculations(user.uid);
+          const calcs = await getCalculations(user.id);
           setCloudHistory(calcs);
         } catch (error) {
           console.error('Error loading cloud history:', error);
