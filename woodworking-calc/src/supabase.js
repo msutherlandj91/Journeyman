@@ -13,6 +13,9 @@ export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '');
 export const signInWithGoogle = async () => {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
+    options: {
+      redirectTo: window.location.origin + window.location.pathname,
+    },
   });
   if (error) throw error;
   return data;
@@ -21,6 +24,9 @@ export const signInWithGoogle = async () => {
 export const signInWithGithub = async () => {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'github',
+    options: {
+      redirectTo: window.location.origin + window.location.pathname,
+    },
   });
   if (error) throw error;
   return data;
