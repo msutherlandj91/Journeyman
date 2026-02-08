@@ -5,10 +5,15 @@ import ResultDisplay from './components/ResultDisplay';
 import PrecisionSelector from './components/PrecisionSelector';
 import UnitSelector from './components/UnitSelector';
 import HistoryPanel from './components/HistoryPanel';
+import AuthPanel from './components/AuthPanel';
 import useLocalStorage from './hooks/useLocalStorage';
+import { useAuth } from './contexts/AuthContext';
+import { saveCalculation, getCalculations } from './firebase';
 import { parseFraction, toMixedNumber, formatMixedNumber, roundToStandardFraction, isStandardDenominator } from './utils/fractionUtils';
 
 function App() {
+  const { user, loading: authLoading } = useAuth();
+
   const [displayValue, setDisplayValue] = useState('0');
   const [operation, setOperation] = useState(null);
   // Store previous value always in inches internally
@@ -20,6 +25,7 @@ function App() {
   const [unit, setUnit] = useLocalStorage('wc-unit', 'in');
   const [history, setHistory] = useLocalStorage('wc-history', []);
   const [showMetric, setShowMetric] = useLocalStorage('wc-metric', false);
+  const [cloudHistory, setCloudHistory] = useState([]);
 
   // Track the result in inches so display always shows both units
   const [resultInches, setResultInches] = useState(null);
@@ -162,12 +168,15 @@ function App() {
       };
       setHistory([...history, entry]);
 
+      // Save to cloud if user is signed in
+      saveToCloud(entry);
+
       setStoredInches(null);
       setOperation(null);
       setExpressionParts([]);
       setWaitingForOperand(true);
     }
-  }, [displayValue, storedInches, operation, unit, expressionParts, history, precision]);
+  }, [displayValue, storedInches, operation, unit, expressionParts, history, precision, saveToCloud]);
 
   const handleClear = useCallback(() => {
     setDisplayValue('0');
@@ -213,6 +222,37 @@ function App() {
     setResultInches(parseFloat(value));
     setShowHistory(false);
   };
+
+  // Load cloud history when user signs in
+  useEffect(() => {
+    if (user && !authLoading) {
+      const loadCloudHistory = async () => {
+        try {
+          const calcs = await getCalculations(user.uid);
+          setCloudHistory(calcs);
+        } catch (error) {
+          console.error('Error loading cloud history:', error);
+        }
+      };
+      loadCloudHistory();
+    } else {
+      setCloudHistory([]);
+    }
+  }, [user, authLoading]);
+
+  // Save new calculation to cloud if user is signed in
+  const saveToCloud = useCallback(async (entry) => {
+    if (user) {
+      try {
+        await saveCalculation(user.uid, entry);
+        // Reload cloud history
+        const calcs = await getCalculations(user.uid);
+        setCloudHistory(calcs);
+      } catch (error) {
+        console.error('Error saving to cloud:', error);
+      }
+    }
+  }, [user]);
 
   // Keyboard support
   useEffect(() => {
@@ -269,6 +309,11 @@ function App() {
             showMetric={showMetric}
             onToggleMetric={() => setShowMetric(!showMetric)}
           />
+        </div>
+
+        {/* Auth Panel */}
+        <div className="mb-4">
+          <AuthPanel />
         </div>
 
         {/* Settings row */}

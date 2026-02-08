@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.finewoodworking.com)",
+      "Bash(npm create:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tailwindcss init:*)",
+      "Bash(npm run dev:*)",
+      "Bash(node -e:*)",
+      "Bash(git init:*)",
+      "Bash(git status:*)",
+      "Bash(git add:*)",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(gh api:*)",
+      "Bash(gh browse:*)",
+      "Bash(gh run list:*)",
+      "Bash(curl:*)",
+      "Bash(npm run build:*)",
+      "Bash(git clone:*)",
+      "Bash(gh run view:*)"
+    ]
+  }
+}
