@@ -7,7 +7,9 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Missing Supabase environment variables. Please create .env file with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY');
 }
 
-export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '');
+export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '', {
+  auth: { persistSession: true }
+});
 
 // Authentication functions
 export const signInWithGoogle = async () => {
@@ -45,7 +47,7 @@ export const onAuthChange = (callback) => {
   return () => subscription.unsubscribe();
 };
 
-// Database functions
+// Database functions with error handling
 export const saveCalculation = async (userId, calculation) => {
   try {
     const { data, error } = await supabase
@@ -62,10 +64,27 @@ export const saveCalculation = async (userId, calculation) => {
       .single();
 
     if (error) throw error;
-    return data.id;
+
+    return {
+      success: true,
+      data: data.id,
+      error: null,
+      isNetworkError: false
+    };
   } catch (error) {
     console.error('Error saving calculation:', error);
-    throw error;
+    const isNetworkError =
+      error.message?.includes('fetch') ||
+      error.message?.includes('network') ||
+      error.message?.includes('Failed to fetch') ||
+      !navigator.onLine;
+
+    return {
+      success: false,
+      data: null,
+      error,
+      isNetworkError
+    };
   }
 };
 
@@ -80,7 +99,7 @@ export const getCalculations = async (userId) => {
     if (error) throw error;
 
     // Transform to match Firebase format
-    return data.map(calc => ({
+    const transformedData = data.map(calc => ({
       id: calc.id,
       expression: calc.expression,
       resultInches: calc.result_inches,
@@ -88,9 +107,27 @@ export const getCalculations = async (userId) => {
       resultFraction: calc.result_fraction,
       timestamp: calc.timestamp,
     }));
+
+    return {
+      success: true,
+      data: transformedData,
+      error: null,
+      isNetworkError: false
+    };
   } catch (error) {
     console.error('Error fetching calculations:', error);
-    return [];
+    const isNetworkError =
+      error.message?.includes('fetch') ||
+      error.message?.includes('network') ||
+      error.message?.includes('Failed to fetch') ||
+      !navigator.onLine;
+
+    return {
+      success: false,
+      data: [],
+      error,
+      isNetworkError
+    };
   }
 };
 
@@ -103,8 +140,26 @@ export const deleteCalculation = async (userId, calcId) => {
       .eq('user_id', userId);
 
     if (error) throw error;
+
+    return {
+      success: true,
+      data: null,
+      error: null,
+      isNetworkError: false
+    };
   } catch (error) {
     console.error('Error deleting calculation:', error);
-    throw error;
+    const isNetworkError =
+      error.message?.includes('fetch') ||
+      error.message?.includes('network') ||
+      error.message?.includes('Failed to fetch') ||
+      !navigator.onLine;
+
+    return {
+      success: false,
+      data: null,
+      error,
+      isNetworkError
+    };
   }
 };

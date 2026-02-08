@@ -11,9 +11,9 @@ import Fraction from 'fraction.js';
 export function parseFraction(input, whole = null, numerator = null, denominator = null) {
   // If separate parts provided
   if (whole !== null || numerator !== null || denominator !== null) {
-    const w = whole || 0;
-    const n = numerator || 0;
-    const d = denominator || 1;
+    const w = whole ?? 0;
+    const n = numerator ?? 0;
+    const d = denominator ?? 1;
 
     // Validate denominator
     if (d === 0) {

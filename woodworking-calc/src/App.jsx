@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import InputMethodA from './components/InputMethodA';
 import Calculator from './components/Calculator';
 import ResultDisplay from './components/ResultDisplay';
@@ -8,7 +8,7 @@ import HistoryPanel from './components/HistoryPanel';
 import AuthPanel from './components/AuthPanel';
 import useLocalStorage from './hooks/useLocalStorage';
 import { useAuth } from './contexts/AuthContext';
-import { saveCalculation, getCalculations } from './supabase';
+import { HistoryService } from './services/historyService';
 import { parseFraction, toMixedNumber, formatMixedNumber, roundToStandardFraction, isStandardDenominator } from './utils/fractionUtils';
 
 function App() {
@@ -23,9 +23,12 @@ function App() {
   // Persisted settings
   const [precision, setPrecision] = useLocalStorage('wc-precision', 16);
   const [unit, setUnit] = useLocalStorage('wc-unit', 'in');
-  const [history, setHistory] = useLocalStorage('wc-history', []);
   const [showMetric, setShowMetric] = useLocalStorage('wc-metric', false);
-  const [cloudHistory, setCloudHistory] = useState([]);
+
+  // Unified history state
+  const [unifiedHistory, setUnifiedHistory] = useState([]);
+  const [historySyncStatus, setHistorySyncStatus] = useState('idle');
+  const historyServiceRef = useRef(null);
 
   // Track the result in inches so display always shows both units
   const [resultInches, setResultInches] = useState(null);
@@ -142,19 +145,32 @@ function App() {
     setResultInches(null);
   }, [displayValue, storedInches, operation, unit, expressionParts]);
 
-  // Save new calculation to cloud if user is signed in
-  const saveToCloud = useCallback(async (entry) => {
-    if (user) {
-      try {
-        await saveCalculation(user.id, entry);
-        // Reload cloud history
-        const calcs = await getCalculations(user.id);
-        setCloudHistory(calcs);
-      } catch (error) {
-        console.error('Error saving to cloud:', error);
-      }
-    }
+  // Initialize and manage history service
+  useEffect(() => {
+    historyServiceRef.current = new HistoryService(user?.id);
+
+    const loadHistory = async () => {
+      setHistorySyncStatus('syncing');
+      const history = await historyServiceRef.current.getHistory();
+      setUnifiedHistory(history);
+      setHistorySyncStatus('synced');
+    };
+
+    loadHistory();
   }, [user]);
+
+  // On sign-in, merge local into cloud
+  useEffect(() => {
+    if (user && !authLoading) {
+      const mergeHistory = async () => {
+        setHistorySyncStatus('syncing');
+        const merged = await historyServiceRef.current.mergeOnSignIn(user.id);
+        setUnifiedHistory(merged);
+        setHistorySyncStatus('synced');
+      };
+      mergeHistory();
+    }
+  }, [user, authLoading]);
 
   const handleEquals = useCallback(() => {
     const inputValue = parseFloat(displayValue);
@@ -172,7 +188,7 @@ function App() {
       // Show the result in inches as the display value
       setDisplayValue(String(totalInches));
 
-      // Add to history
+      // Add to history using unified service
       const entry = {
         expression: fullExpression,
         resultInches: totalInches,
@@ -180,17 +196,17 @@ function App() {
         resultFraction: formatResult(totalInches),
         timestamp: Date.now()
       };
-      setHistory([...history, entry]);
 
-      // Save to cloud if user is signed in
-      saveToCloud(entry);
+      // Save through history service (handles local + cloud sync)
+      historyServiceRef.current.saveCalculation(entry);
+      setUnifiedHistory([...unifiedHistory, entry]);
 
       setStoredInches(null);
       setOperation(null);
       setExpressionParts([]);
       setWaitingForOperand(true);
     }
-  }, [displayValue, storedInches, operation, unit, expressionParts, history, precision, saveToCloud]);
+  }, [displayValue, storedInches, operation, unit, expressionParts, unifiedHistory, precision]);
 
   const handleClear = useCallback(() => {
     setDisplayValue('0');
@@ -228,7 +244,9 @@ function App() {
   };
 
   const handleClearHistory = () => {
-    setHistory([]);
+    setUnifiedHistory([]);
+    // Clear local storage
+    historyServiceRef.current.saveLocalHistory([]);
   };
 
   const handleUseHistoryValue = (value) => {
@@ -237,22 +255,7 @@ function App() {
     setShowHistory(false);
   };
 
-  // Load cloud history when user signs in
-  useEffect(() => {
-    if (user && !authLoading) {
-      const loadCloudHistory = async () => {
-        try {
-          const calcs = await getCalculations(user.id);
-          setCloudHistory(calcs);
-        } catch (error) {
-          console.error('Error loading cloud history:', error);
-        }
-      };
-      loadCloudHistory();
-    } else {
-      setCloudHistory([]);
-    }
-  }, [user, authLoading]);
+  // History loading is now handled by the unified service in earlier useEffect
 
   // Keyboard support
   useEffect(() => {
@@ -360,7 +363,7 @@ function App() {
         {showHistory && (
           <div className="mb-4 bg-[#1a1a1a] rounded-2xl p-4">
             <HistoryPanel
-              history={history}
+              history={unifiedHistory}
               onClearHistory={handleClearHistory}
               onUseValue={handleUseHistoryValue}
               precision={precision}

@@ -34,7 +34,10 @@
       "WebFetch(domain:esbuild.github.io)",
       "WebFetch(domain:firebase.google.com)",
       "WebFetch(domain:vite.dev)",
-      "WebFetch(domain:provash.dev)"
+      "WebFetch(domain:provash.dev)",
+      "Bash(python3:*)",
+      "Bash(ls:*)",
+      "Bash(npm run test:*)"
     ]
   }
 }

@@ -35,3 +35,21 @@ createRoot(document.getElementById('root')).render(
     </AuthProvider>
   </ErrorBoundary>,
 )
+
+// Register service worker for PWA support
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/Journeyman/sw.js')
+      .then(registration => {
+        console.log('SW registered:', registration);
+
+        // Listen for sync messages
+        navigator.serviceWorker.addEventListener('message', (event) => {
+          if (event.data.type === 'RETRY_SYNC') {
+            window.dispatchEvent(new CustomEvent('retry-sync'));
+          }
+        });
+      })
+      .catch(error => console.error('SW registration failed:', error));
+  });
+}
