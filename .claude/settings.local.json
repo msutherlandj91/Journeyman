@@ -23,7 +23,9 @@
       "Bash(git clone:*)",
       "Bash(gh run view:*)",
       "WebFetch(domain:localhost)",
-      "Bash(npm ls:*)"
+      "Bash(npm ls:*)",
+      "Bash(npm search:*)",
+      "Bash(npm uninstall:*)"
     ]
   }
 }
