@@ -1,6 +1,6 @@
-import firebase from 'firebase/compat/app';
-import 'firebase/compat/auth';
-import 'firebase/compat/firestore';
+import { initializeApp } from 'firebase/app';
+import { getAuth, GoogleAuthProvider, GithubAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, collection, doc, setDoc, query, getDocs, orderBy, deleteDoc } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: "AIzaSyA8NNUo5f4c3y4IAiTY-qzgRwsV5Zc0Kz0",
@@ -12,36 +12,39 @@ const firebaseConfig = {
   measurementId: "G-37JDSBDN4T"
 };
 
-const app = firebase.initializeApp(firebaseConfig);
-const auth = app.auth();
-const db = app.firestore();
+// Initialize Firebase only once
+let app;
+let auth;
+let db;
+
+try {
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+} catch (error) {
+  console.error('Firebase initialization error:', error);
+}
 
 export const signInWithGoogle = () => {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  return auth.signInWithPopup(provider);
+  return signInWithPopup(auth, new GoogleAuthProvider());
 };
 
 export const signInWithGithub = () => {
-  const provider = new firebase.auth.GithubAuthProvider();
-  return auth.signInWithPopup(provider);
+  return signInWithPopup(auth, new GithubAuthProvider());
 };
 
 export const logOut = () => {
-  return auth.signOut();
+  return signOut(auth);
 };
 
 export const onAuthChange = (callback) => {
-  return auth.onAuthStateChanged(callback);
+  return onAuthStateChanged(auth, callback);
 };
 
 export const saveCalculation = async (userId, calculation) => {
   try {
-    const calcRef = db
-      .collection('users')
-      .doc(userId)
-      .collection('calculations')
-      .doc(calculation.id || Date.now().toString());
-    await calcRef.set({
+    const calcRef = doc(collection(db, 'users', userId, 'calculations'), calculation.id || Date.now().toString());
+    await setDoc(calcRef, {
       ...calculation,
       timestamp: calculation.timestamp || Date.now(),
     });
@@ -54,12 +57,9 @@ export const saveCalculation = async (userId, calculation) => {
 
 export const getCalculations = async (userId) => {
   try {
-    const snapshot = await db
-      .collection('users')
-      .doc(userId)
-      .collection('calculations')
-      .orderBy('timestamp', 'desc')
-      .get();
+    const calcsRef = collection(db, 'users', userId, 'calculations');
+    const q = query(calcsRef, orderBy('timestamp', 'desc'));
+    const snapshot = await getDocs(q);
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
   } catch (error) {
     console.error('Error fetching calculations:', error);
@@ -69,12 +69,7 @@ export const getCalculations = async (userId) => {
 
 export const deleteCalculation = async (userId, calcId) => {
   try {
-    await db
-      .collection('users')
-      .doc(userId)
-      .collection('calculations')
-      .doc(calcId)
-      .delete();
+    await deleteDoc(doc(db, 'users', userId, 'calculations', calcId));
   } catch (error) {
     console.error('Error deleting calculation:', error);
     throw error;
