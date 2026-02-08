@@ -25,7 +25,11 @@
       "WebFetch(domain:localhost)",
       "Bash(npm ls:*)",
       "Bash(npm search:*)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(npx esbuild:*)",
+      "Bash(node scripts/prebundle-firebase.js:*)",
+      "Bash(git reset:*)",
+      "Bash(git rm:*)"
     ]
   }
 }
