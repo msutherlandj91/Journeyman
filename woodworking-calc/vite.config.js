@@ -5,12 +5,4 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   base: '/Journeyman/',
   plugins: [react()],
-  optimizeDeps: {
-    include: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
-  },
-  build: {
-    commonjsOptions: {
-      include: [/firebase/, /node_modules/],
-    },
-  },
 })

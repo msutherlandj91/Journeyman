@@ -8,21 +8,12 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let unsubscribe = null;
-
-    onAuthChange((currentUser) => {
+    const unsubscribe = onAuthChange((currentUser) => {
       setUser(currentUser);
-      setLoading(false);
-    }).then((unsub) => {
-      unsubscribe = unsub;
-    }).catch((error) => {
-      console.error('Auth initialization error:', error);
       setLoading(false);
     });
 
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
+    return () => unsubscribe();
   }, []);
 
   const logout = async () => {

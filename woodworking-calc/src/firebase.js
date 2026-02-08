@@ -1,7 +1,5 @@
-// Lazy-load Firebase modules only when needed
-let firebasePromise = null;
-let authPromise = null;
-let firestorePromise = null;
+// Use Firebase from CDN (loaded via script tags in index.html)
+// This avoids all bundling/circular dependency issues
 
 const firebaseConfig = {
   apiKey: "AIzaSyA8NNUo5f4c3y4IAiTY-qzgRwsV5Zc0Kz0",
@@ -13,64 +11,43 @@ const firebaseConfig = {
   measurementId: "G-37JDSBDN4T"
 };
 
-async function getFirebaseApp() {
-  if (!firebasePromise) {
-    firebasePromise = import('firebase/app').then(({ initializeApp }) => {
-      return initializeApp(firebaseConfig);
-    });
-  }
-  return firebasePromise;
+// Access Firebase from global window object (loaded from CDN)
+const firebase = window.firebase;
+
+if (!firebase) {
+  throw new Error('Firebase not loaded from CDN');
 }
 
-async function getAuthModule() {
-  if (!authPromise) {
-    authPromise = Promise.all([
-      getFirebaseApp(),
-      import('firebase/auth')
-    ]).then(([app, auth]) => {
-      return { app, auth: auth.getAuth(app), ...auth };
-    });
-  }
-  return authPromise;
-}
+const app = firebase.initializeApp(firebaseConfig);
+const auth = app.auth();
+const db = app.firestore();
 
-async function getFirestoreModule() {
-  if (!firestorePromise) {
-    firestorePromise = Promise.all([
-      getFirebaseApp(),
-      import('firebase/firestore')
-    ]).then(([app, firestore]) => {
-      return { app, db: firestore.getFirestore(app), ...firestore };
-    });
-  }
-  return firestorePromise;
-}
-
-export const signInWithGoogle = async () => {
-  const { auth, GoogleAuthProvider, signInWithPopup } = await getAuthModule();
-  return signInWithPopup(auth, new GoogleAuthProvider());
+export const signInWithGoogle = () => {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  return auth.signInWithPopup(provider);
 };
 
-export const signInWithGithub = async () => {
-  const { auth, GithubAuthProvider, signInWithPopup } = await getAuthModule();
-  return signInWithPopup(auth, new GithubAuthProvider());
+export const signInWithGithub = () => {
+  const provider = new firebase.auth.GithubAuthProvider();
+  return auth.signInWithPopup(provider);
 };
 
-export const logOut = async () => {
-  const { auth, signOut } = await getAuthModule();
-  return signOut(auth);
+export const logOut = () => {
+  return auth.signOut();
 };
 
-export const onAuthChange = async (callback) => {
-  const { auth, onAuthStateChanged } = await getAuthModule();
-  return onAuthStateChanged(auth, callback);
+export const onAuthChange = (callback) => {
+  return auth.onAuthStateChanged(callback);
 };
 
 export const saveCalculation = async (userId, calculation) => {
   try {
-    const { db, collection, doc, setDoc } = await getFirestoreModule();
-    const calcRef = doc(collection(db, 'users', userId, 'calculations'), calculation.id || Date.now().toString());
-    await setDoc(calcRef, {
+    const calcRef = db
+      .collection('users')
+      .doc(userId)
+      .collection('calculations')
+      .doc(calculation.id || Date.now().toString());
+    await calcRef.set({
       ...calculation,
       timestamp: calculation.timestamp || Date.now(),
     });
@@ -83,10 +60,12 @@ export const saveCalculation = async (userId, calculation) => {
 
 export const getCalculations = async (userId) => {
   try {
-    const { db, collection, query, getDocs, orderBy } = await getFirestoreModule();
-    const calcsRef = collection(db, 'users', userId, 'calculations');
-    const q = query(calcsRef, orderBy('timestamp', 'desc'));
-    const snapshot = await getDocs(q);
+    const snapshot = await db
+      .collection('users')
+      .doc(userId)
+      .collection('calculations')
+      .orderBy('timestamp', 'desc')
+      .get();
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
   } catch (error) {
     console.error('Error fetching calculations:', error);
@@ -96,8 +75,12 @@ export const getCalculations = async (userId) => {
 
 export const deleteCalculation = async (userId, calcId) => {
   try {
-    const { db, doc, deleteDoc } = await getFirestoreModule();
-    await deleteDoc(doc(db, 'users', userId, 'calculations', calcId));
+    await db
+      .collection('users')
+      .doc(userId)
+      .collection('calculations')
+      .doc(calcId)
+      .delete();
   } catch (error) {
     console.error('Error deleting calculation:', error);
     throw error;
