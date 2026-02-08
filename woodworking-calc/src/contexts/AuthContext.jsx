@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { onAuthChange, logOut } from '../firebase';
+import { onAuthChange, logOut } from '../supabase';
 
 const AuthContext = createContext();
 

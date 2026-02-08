@@ -8,7 +8,7 @@ import HistoryPanel from './components/HistoryPanel';
 import AuthPanel from './components/AuthPanel';
 import useLocalStorage from './hooks/useLocalStorage';
 import { useAuth } from './contexts/AuthContext';
-import { saveCalculation, getCalculations } from './firebase';
+import { saveCalculation, getCalculations } from './supabase';
 import { parseFraction, toMixedNumber, formatMixedNumber, roundToStandardFraction, isStandardDenominator } from './utils/fractionUtils';
 
 function App() {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { signInWithGoogle, signInWithGithub } from '../firebase';
+import { signInWithGoogle, signInWithGithub } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
 
 /**

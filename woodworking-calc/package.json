@@ -5,13 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "node scripts/prebundle-firebase.js",
-    "build": "npm run prebuild && vite build",
+    "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
-    "firebase": "^9.23.0",
+    "@supabase/supabase-js": "^2.95.3",
     "fraction.js": "^5.3.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"

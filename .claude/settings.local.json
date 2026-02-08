@@ -29,7 +29,12 @@
       "Bash(npx esbuild:*)",
       "Bash(node scripts/prebundle-firebase.js:*)",
       "Bash(git reset:*)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(initialization\" TDZ errors at runtime. esbuild uses var declarations\nwhich are hoisted and immune to TDZ.\n\nSolution: Pre-bundle firebase-raw.js with esbuild into firebase.js\nbefore Vite build. The esbuild output uses var declarations, so when\nRollup includes it in the final bundle, no TDZ errors occur.\n\nVerified: 0 TDZ issues in final bundle \\(vs 13 without pre-bundling\\).\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "WebFetch(domain:esbuild.github.io)",
+      "WebFetch(domain:firebase.google.com)",
+      "WebFetch(domain:vite.dev)",
+      "WebFetch(domain:provash.dev)"
     ]
   }
 }
