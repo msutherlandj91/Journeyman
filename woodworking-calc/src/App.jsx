@@ -142,6 +142,20 @@ function App() {
     setResultInches(null);
   }, [displayValue, storedInches, operation, unit, expressionParts]);
 
+  // Save new calculation to cloud if user is signed in
+  const saveToCloud = useCallback(async (entry) => {
+    if (user) {
+      try {
+        await saveCalculation(user.uid, entry);
+        // Reload cloud history
+        const calcs = await getCalculations(user.uid);
+        setCloudHistory(calcs);
+      } catch (error) {
+        console.error('Error saving to cloud:', error);
+      }
+    }
+  }, [user]);
+
   const handleEquals = useCallback(() => {
     const inputValue = parseFloat(displayValue);
 
@@ -222,20 +236,6 @@ function App() {
     setResultInches(parseFloat(value));
     setShowHistory(false);
   };
-
-  // Save new calculation to cloud if user is signed in
-  const saveToCloud = useCallback(async (entry) => {
-    if (user) {
-      try {
-        await saveCalculation(user.uid, entry);
-        // Reload cloud history
-        const calcs = await getCalculations(user.uid);
-        setCloudHistory(calcs);
-      } catch (error) {
-        console.error('Error saving to cloud:', error);
-      }
-    }
-  }, [user]);
 
   // Load cloud history when user signs in
   useEffect(() => {
