@@ -1,7 +1,20 @@
 @import "tailwindcss";
 
+:root {
+  --bg-app: #111111;
+  --green-accent: rgba(86, 226, 172, 1);
+  --green-accent-40: rgba(86, 226, 172, 0.403);
+  --green-accent-27: rgba(86, 226, 172, 0.269);
+  --green-accent-16: rgba(86, 226, 172, 0.16);
+  --green-accent-12: rgba(86, 226, 172, 0.12);
+  --glass-number: linear-gradient(129.57deg, rgba(255, 255, 255, 0.173) 14.89%, rgba(255, 255, 255, 0.115) 126.12%);
+  --glass-modifier: linear-gradient(129.57deg, rgba(255, 255, 255, 0.346) 14.89%, rgba(255, 255, 255, 0.23) 126.12%);
+  --glass-operator: linear-gradient(129.57deg, rgba(86, 226, 172, 0.403) 14.89%, rgba(86, 226, 172, 0.269) 126.12%);
+}
+
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  font-family: 'Inter', sans-serif;
 }

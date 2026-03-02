@@ -1,49 +1,45 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import InputMethodA from './components/InputMethodA';
+import MenuBar from './components/MenuBar';
 import Calculator from './components/Calculator';
 import ResultDisplay from './components/ResultDisplay';
-import PrecisionSelector from './components/PrecisionSelector';
-import UnitSelector from './components/UnitSelector';
+import ModeToggle from './components/ModeToggle';
+import Drawer from './components/Drawer';
 import HistoryPanel from './components/HistoryPanel';
-import AuthPanel from './components/AuthPanel';
+import SettingsDrawer from './components/SettingsDrawer';
 import useLocalStorage from './hooks/useLocalStorage';
 import { useAuth } from './contexts/AuthContext';
 import { HistoryService } from './services/historyService';
 import { parseFraction, toMixedNumber, formatMixedNumber, roundToStandardFraction, isStandardDenominator } from './utils/fractionUtils';
+
+const PRECISION = 32;
 
 function App() {
   const { user, loading: authLoading } = useAuth();
 
   const [displayValue, setDisplayValue] = useState('0');
   const [operation, setOperation] = useState(null);
-  // Store previous value always in inches internally
   const [storedInches, setStoredInches] = useState(null);
   const [waitingForOperand, setWaitingForOperand] = useState(false);
 
   // Persisted settings
-  const [precision, setPrecision] = useLocalStorage('wc-precision', 16);
   const [unit, setUnit] = useLocalStorage('wc-unit', 'in');
   const [showMetric, setShowMetric] = useLocalStorage('wc-metric', false);
+  const [mode, setMode] = useLocalStorage('wc-mode', 'decimal');
 
   // Unified history state
   const [unifiedHistory, setUnifiedHistory] = useState([]);
   const [historySyncStatus, setHistorySyncStatus] = useState('idle');
   const historyServiceRef = useRef(null);
 
-  // Track the result in inches so display always shows both units
+  // Drawer state
+  const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
+  const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
+
+  // Track the result in inches
   const [resultInches, setResultInches] = useState(null);
 
-  // Expression tracking for history
+  // Expression tracking for history and display
   const [expressionParts, setExpressionParts] = useState([]);
-
-  // UI state
-  const [showManualInput, setShowManualInput] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
-  const [manualInput, setManualInput] = useState({
-    whole: 0,
-    numerator: 0,
-    denominator: 1
-  });
 
   const toInches = (value, fromUnit) => {
     return fromUnit === 'ft' ? value * 12 : value;
@@ -54,7 +50,7 @@ function App() {
       const frac = parseFraction(value);
       const mixed = toMixedNumber(frac);
       if (!isStandardDenominator(mixed.denominator) && mixed.denominator !== 1) {
-        const rounded = roundToStandardFraction(frac, precision);
+        const rounded = roundToStandardFraction(frac, PRECISION);
         return formatMixedNumber(rounded, true);
       }
       return formatMixedNumber(frac, true);
@@ -96,6 +92,50 @@ function App() {
     }
   };
 
+  // Parse fraction display value like "1-3/4" into inches
+  const parseFractionDisplay = (str) => {
+    try {
+      // Handle formats: "3/4", "1-3/4", "5", "0"
+      const cleaned = str.trim();
+      if (cleaned === '' || cleaned === '0') return 0;
+
+      // If it contains a dash, split into whole and fraction
+      if (cleaned.includes('-')) {
+        const parts = cleaned.split('-');
+        const whole = parseInt(parts[0]) || 0;
+        const fracPart = parts[1];
+        if (fracPart && fracPart.includes('/')) {
+          const [num, den] = fracPart.split('/');
+          const frac = parseFraction(null, whole, parseInt(num) || 0, parseInt(den) || 1);
+          return frac.valueOf();
+        }
+        // Just "5-" with no fraction yet, treat as whole number
+        return whole;
+      }
+
+      // If it contains a slash, it's just a fraction
+      if (cleaned.includes('/')) {
+        const [num, den] = cleaned.split('/');
+        const frac = parseFraction(null, 0, parseInt(num) || 0, parseInt(den) || 1);
+        return frac.valueOf();
+      }
+
+      // Plain number
+      return parseFloat(cleaned) || 0;
+    } catch {
+      return 0;
+    }
+  };
+
+  const getCurrentValueInInches = useCallback(() => {
+    if (mode === 'fraction') {
+      const value = parseFractionDisplay(displayValue);
+      return toInches(value, unit);
+    }
+    const value = parseFloat(displayValue) || 0;
+    return toInches(value, unit);
+  }, [displayValue, mode, unit]);
+
   const handleNumberInput = useCallback((num) => {
     if (waitingForOperand) {
       setDisplayValue(String(num));
@@ -103,11 +143,11 @@ function App() {
     } else {
       setDisplayValue(displayValue === '0' ? String(num) : displayValue + num);
     }
-    // Clear result display when entering new number
     setResultInches(null);
   }, [displayValue, waitingForOperand]);
 
   const handleDecimal = useCallback(() => {
+    if (mode === 'fraction') return; // No decimal in fraction mode
     if (waitingForOperand) {
       setDisplayValue('0.');
       setWaitingForOperand(false);
@@ -115,7 +155,29 @@ function App() {
       setDisplayValue(displayValue + '.');
     }
     setResultInches(null);
-  }, [displayValue, waitingForOperand]);
+  }, [displayValue, waitingForOperand, mode]);
+
+  const handleFractionSlash = useCallback(() => {
+    if (mode !== 'fraction') return;
+    if (waitingForOperand) {
+      setDisplayValue('/');
+      setWaitingForOperand(false);
+    } else if (!displayValue.includes('/')) {
+      setDisplayValue(displayValue + '/');
+    }
+    setResultInches(null);
+  }, [displayValue, waitingForOperand, mode]);
+
+  const handleFractionDash = useCallback(() => {
+    if (mode !== 'fraction') return;
+    if (waitingForOperand) {
+      setDisplayValue('-');
+      setWaitingForOperand(false);
+    } else if (!displayValue.includes('-')) {
+      setDisplayValue(displayValue + '-');
+    }
+    setResultInches(null);
+  }, [displayValue, waitingForOperand, mode]);
 
   const handleBackspace = useCallback(() => {
     if (waitingForOperand) return;
@@ -127,23 +189,22 @@ function App() {
   }, [displayValue, waitingForOperand]);
 
   const handleOperation = useCallback((nextOperation) => {
-    const inputValue = parseFloat(displayValue);
-    const inputInInches = toInches(inputValue, unit);
+    const inputInInches = getCurrentValueInInches();
     const unitSymbol = unit === 'in' ? '"' : "'";
 
     if (storedInches === null) {
       setStoredInches(inputInInches);
-      setExpressionParts([`${inputValue}${unitSymbol}`]);
+      setExpressionParts([`${displayValue}${unitSymbol}`]);
     } else if (operation) {
       const newInches = performOperation(storedInches, inputInInches, operation);
       setStoredInches(newInches);
-      setExpressionParts([...expressionParts, operation, `${inputValue}${unitSymbol}`]);
+      setExpressionParts([...expressionParts, operation, `${displayValue}${unitSymbol}`]);
     }
 
     setWaitingForOperand(true);
     setOperation(nextOperation);
     setResultInches(null);
-  }, [displayValue, storedInches, operation, unit, expressionParts]);
+  }, [displayValue, storedInches, operation, unit, expressionParts, getCurrentValueInInches]);
 
   // Initialize and manage history service
   useEffect(() => {
@@ -173,22 +234,17 @@ function App() {
   }, [user, authLoading]);
 
   const handleEquals = useCallback(() => {
-    const inputValue = parseFloat(displayValue);
-
     if (storedInches !== null && operation) {
-      const inputInInches = toInches(inputValue, unit);
+      const inputInInches = getCurrentValueInInches();
       const totalInches = performOperation(storedInches, inputInInches, operation);
 
       const unitSymbol = unit === 'in' ? '"' : "'";
-      const fullExpression = [...expressionParts, operation, `${inputValue}${unitSymbol}`].join(' ');
+      const fullExpression = [...expressionParts, operation, `${displayValue}${unitSymbol}`].join(' ');
 
-      // Store result in inches for dual display
       setResultInches(totalInches);
-
-      // Show the result in inches as the display value
       setDisplayValue(String(totalInches));
 
-      // Add to history using unified service
+      // Save to history
       const entry = {
         expression: fullExpression,
         resultInches: totalInches,
@@ -197,7 +253,6 @@ function App() {
         timestamp: Date.now()
       };
 
-      // Save through history service (handles local + cloud sync)
       historyServiceRef.current.saveCalculation(entry);
       setUnifiedHistory([...unifiedHistory, entry]);
 
@@ -206,7 +261,7 @@ function App() {
       setExpressionParts([]);
       setWaitingForOperand(true);
     }
-  }, [displayValue, storedInches, operation, unit, expressionParts, unifiedHistory, precision]);
+  }, [displayValue, storedInches, operation, unit, expressionParts, unifiedHistory, getCurrentValueInInches]);
 
   const handleClear = useCallback(() => {
     setDisplayValue('0');
@@ -217,45 +272,19 @@ function App() {
     setExpressionParts([]);
   }, []);
 
-  const handleToggleSign = useCallback(() => {
-    const value = parseFloat(displayValue);
-    setDisplayValue(String(value * -1));
-  }, [displayValue]);
+  const handleUnitToggle = useCallback(() => {
+    setUnit(unit === 'in' ? 'ft' : 'in');
+  }, [unit, setUnit]);
 
-  const handlePercent = useCallback(() => {
-    const value = parseFloat(displayValue);
-    setDisplayValue(String(value / 100));
-  }, [displayValue]);
-
-  const handleManualInputSubmit = () => {
-    try {
-      const fraction = parseFraction(
-        null,
-        manualInput.whole,
-        manualInput.numerator,
-        manualInput.denominator
-      );
-      setDisplayValue(String(fraction.valueOf()));
-      setResultInches(null);
-      setShowManualInput(false);
-    } catch (err) {
-      console.error('Invalid input:', err);
+  // Build expression string for display
+  const currentExpression = (() => {
+    if (expressionParts.length === 0 && !operation) return null;
+    const parts = [...expressionParts];
+    if (operation) {
+      parts.push(operation);
     }
-  };
-
-  const handleClearHistory = () => {
-    setUnifiedHistory([]);
-    // Clear local storage
-    historyServiceRef.current.saveLocalHistory([]);
-  };
-
-  const handleUseHistoryValue = (value) => {
-    setDisplayValue(String(value));
-    setResultInches(parseFloat(value));
-    setShowHistory(false);
-  };
-
-  // History loading is now handled by the unified service in earlier useEffect
+    return parts.join(' ');
+  })();
 
   // Keyboard support
   useEffect(() => {
@@ -275,19 +304,32 @@ function App() {
         handleOperation('+');
       } else if (key === '-') {
         e.preventDefault();
-        handleOperation('-');
+        if (mode === 'fraction') {
+          handleFractionDash();
+        } else {
+          handleOperation('-');
+        }
       } else if (key === '*') {
         e.preventDefault();
         handleOperation('×');
       } else if (key === '/') {
         e.preventDefault();
-        handleOperation('÷');
+        if (mode === 'fraction') {
+          handleFractionSlash();
+        } else {
+          handleOperation('÷');
+        }
       } else if (key === 'Enter' || key === '=') {
         e.preventDefault();
         handleEquals();
       } else if (key === 'Escape') {
         e.preventDefault();
-        handleClear();
+        if (historyDrawerOpen || settingsDrawerOpen) {
+          setHistoryDrawerOpen(false);
+          setSettingsDrawerOpen(false);
+        } else {
+          handleClear();
+        }
       } else if (key === 'Backspace') {
         e.preventDefault();
         handleBackspace();
@@ -296,100 +338,85 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleNumberInput, handleDecimal, handleOperation, handleEquals, handleClear, handleBackspace]);
+  }, [handleNumberInput, handleDecimal, handleOperation, handleEquals, handleClear, handleBackspace, handleFractionSlash, handleFractionDash, mode, historyDrawerOpen, settingsDrawerOpen]);
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
-        {/* Display area */}
-        <div className="mb-6">
+    <div className="min-h-screen bg-[#111] flex items-center justify-center">
+      <div className="w-full max-w-sm min-h-screen flex flex-col justify-between px-[7px] pb-[7px]">
+        {/* Top: Menu bar */}
+        <MenuBar
+          showMetric={showMetric}
+          onToggleMetric={() => setShowMetric(!showMetric)}
+          onHistoryClick={() => setHistoryDrawerOpen(true)}
+          onSettingsClick={() => setSettingsDrawerOpen(true)}
+        />
+
+        {/* Bottom group: readout + calculator + toggle */}
+        <div className="flex flex-col">
           <ResultDisplay
             displayValue={displayValue}
-            operation={operation}
-            precision={precision}
-            unit={unit}
             resultInches={resultInches}
-            showMetric={showMetric}
-            onToggleMetric={() => setShowMetric(!showMetric)}
+            expression={currentExpression}
           />
-        </div>
 
-        {/* Auth Panel */}
-        <div className="mb-4">
-          <AuthPanel />
-        </div>
+          <div className="h-3" />
 
-        {/* Settings row */}
-        <div className="flex items-center justify-between mb-4 gap-4">
-          <PrecisionSelector precision={precision} onChange={setPrecision} />
-          <UnitSelector unit={unit} onChange={setUnit} />
-        </div>
-
-        {/* Toggle buttons row */}
-        <div className="flex items-center justify-center gap-4 mb-4">
-          <button
-            onClick={() => { setShowManualInput(!showManualInput); setShowHistory(false); }}
-            className={`text-sm transition-colors ${showManualInput ? 'text-[#FF9F0A]' : 'text-gray-400 hover:text-gray-300'}`}
-          >
-            Fraction Input
-          </button>
-          <span className="text-gray-600">|</span>
-          <button
-            onClick={() => { setShowHistory(!showHistory); setShowManualInput(false); }}
-            className={`text-sm transition-colors ${showHistory ? 'text-[#FF9F0A]' : 'text-gray-400 hover:text-gray-300'}`}
-          >
-            History ({history.length})
-          </button>
-        </div>
-
-        {/* Manual input (collapsible) */}
-        {showManualInput && (
-          <div className="mb-4 bg-[#1a1a1a] rounded-2xl p-4">
-            <InputMethodA
-              value={manualInput}
-              onChange={setManualInput}
-              onSubmit={handleManualInputSubmit}
-            />
-            <button
-              onClick={handleManualInputSubmit}
-              className="w-full mt-3 py-2 bg-[#FF9F0A] text-white rounded-full text-sm font-light"
-            >
-              Use This Value
-            </button>
-          </div>
-        )}
-
-        {/* History panel (collapsible) */}
-        {showHistory && (
-          <div className="mb-4 bg-[#1a1a1a] rounded-2xl p-4">
-            <HistoryPanel
-              history={unifiedHistory}
-              onClearHistory={handleClearHistory}
-              onUseValue={handleUseHistoryValue}
-              precision={precision}
-            />
-          </div>
-        )}
-
-        {/* Calculator buttons */}
-        <div className="mt-4">
           <Calculator
+            mode={mode}
+            unit={unit}
             onNumberInput={handleNumberInput}
-            onDecimal={handleDecimal}
             onOperation={handleOperation}
-            onEquals={handleEquals}
             onClear={handleClear}
-            onToggleSign={handleToggleSign}
-            onPercent={handlePercent}
+            onEquals={handleEquals}
+            onBackspace={handleBackspace}
+            onUnitToggle={handleUnitToggle}
+            onFractionSlash={handleFractionSlash}
+            onFractionDash={handleFractionDash}
+            onDecimal={handleDecimal}
             currentOperation={operation}
           />
-        </div>
 
-        {/* Keyboard hint for desktop */}
-        <div className="text-center mt-4 text-xs text-gray-600">
-          <span className="hidden sm:inline">Keyboard: 0-9, +, -, *, /, Enter, Esc, Backspace</span>
+          <div className="h-3" />
+
+          <ModeToggle
+            mode={mode}
+            onModeChange={setMode}
+          />
         </div>
       </div>
+
+      {/* History Drawer (left) */}
+      <Drawer
+        isOpen={historyDrawerOpen}
+        onClose={() => setHistoryDrawerOpen(false)}
+        side="left"
+        title="History"
+      >
+        <HistoryPanel
+          history={unifiedHistory}
+          onClearHistory={() => {
+            historyServiceRef.current.clearHistory();
+            setUnifiedHistory([]);
+          }}
+          onUseValue={(value) => {
+            setDisplayValue(String(value));
+            setResultInches(parseFloat(value));
+            setWaitingForOperand(true);
+            setHistoryDrawerOpen(false);
+          }}
+          precision={PRECISION}
+        />
+      </Drawer>
+
+      {/* Settings Drawer (right) */}
+      <Drawer
+        isOpen={settingsDrawerOpen}
+        onClose={() => setSettingsDrawerOpen(false)}
+        side="right"
+        title="Settings"
+      >
+        <SettingsDrawer />
+      </Drawer>
     </div>
   );
 }

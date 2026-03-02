@@ -111,6 +111,11 @@ export class HistoryService {
     localStorage.setItem(this.pendingSyncKey, JSON.stringify(pending));
   }
 
+  clearHistory() {
+    this.saveLocalHistory([]);
+    localStorage.removeItem(this.pendingSyncKey);
+  }
+
   async retryPendingSync() {
     if (!this.userId) return;
 

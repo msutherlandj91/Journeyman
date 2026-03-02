@@ -49,8 +49,7 @@ export default function HistoryPanel({ history, onClearHistory, onUseValue, prec
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-medium text-gray-400">History</span>
+      <div className="flex items-center justify-end mb-3">
         <button
           onClick={onClearHistory}
           className="text-xs text-red-400 hover:text-red-300 transition-colors"
@@ -59,7 +58,7 @@ export default function HistoryPanel({ history, onClearHistory, onUseValue, prec
         </button>
       </div>
 
-      <div className="max-h-64 overflow-y-auto space-y-1">
+      <div className="space-y-1">
         {history.slice().reverse().map((entry, i) => {
           const inches = parseFloat(entry.resultInches || entry.resultDecimal);
           const absInches = Math.abs(inches);
@@ -70,7 +69,7 @@ export default function HistoryPanel({ history, onClearHistory, onUseValue, prec
             <button
               key={i}
               onClick={() => onUseValue(entry.resultInches || entry.resultDecimal)}
-              className="w-full text-right px-4 py-3 rounded-lg bg-[#1a1a1a] hover:bg-[#252525] transition-colors"
+              className="w-full text-right px-4 py-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
             >
               <div className="text-xs text-gray-500">
                 {entry.expression}
