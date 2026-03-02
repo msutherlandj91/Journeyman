@@ -342,7 +342,7 @@ function App() {
 
   return (
     <div className="h-[100dvh] bg-[#111] flex items-center justify-center overflow-hidden">
-      <div className="w-full max-w-sm h-[100dvh] flex flex-col justify-between px-[7px] pb-[env(safe-area-inset-bottom,7px)]">
+      <div className="w-full max-w-sm h-[100dvh] flex flex-col justify-between px-[7px] pb-[calc(12px+env(safe-area-inset-bottom,0px))]">
         {/* Top: Menu bar */}
         <MenuBar
           showMetric={showMetric}
@@ -357,6 +357,8 @@ function App() {
             displayValue={displayValue}
             resultInches={resultInches}
             expression={currentExpression}
+            unit={unit}
+            showMetric={showMetric}
           />
 
           <div className="h-2 shrink-0" />
