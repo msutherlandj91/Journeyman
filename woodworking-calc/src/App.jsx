@@ -341,8 +341,8 @@ function App() {
   }, [handleNumberInput, handleDecimal, handleOperation, handleEquals, handleClear, handleBackspace, handleFractionSlash, handleFractionDash, mode, historyDrawerOpen, settingsDrawerOpen]);
 
   return (
-    <div className="min-h-screen bg-[#111] flex items-center justify-center">
-      <div className="w-full max-w-sm min-h-screen flex flex-col justify-between px-[7px] pb-[7px]">
+    <div className="h-[100dvh] bg-[#111] flex items-center justify-center overflow-hidden">
+      <div className="w-full max-w-sm h-[100dvh] flex flex-col justify-between px-[7px] pb-[env(safe-area-inset-bottom,7px)]">
         {/* Top: Menu bar */}
         <MenuBar
           showMetric={showMetric}
@@ -352,14 +352,14 @@ function App() {
         />
 
         {/* Bottom group: readout + calculator + toggle */}
-        <div className="flex flex-col">
+        <div className="flex flex-col min-h-0">
           <ResultDisplay
             displayValue={displayValue}
             resultInches={resultInches}
             expression={currentExpression}
           />
 
-          <div className="h-3" />
+          <div className="h-2 shrink-0" />
 
           <Calculator
             mode={mode}
@@ -376,7 +376,7 @@ function App() {
             currentOperation={operation}
           />
 
-          <div className="h-3" />
+          <div className="h-2 shrink-0" />
 
           <ModeToggle
             mode={mode}

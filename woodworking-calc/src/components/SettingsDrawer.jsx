@@ -1,10 +1,101 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { signInWithGoogle } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
+
+function useInstallPrompt() {
+  const deferredPrompt = useRef(null);
+  const [canInstall, setCanInstall] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(
+    window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
+  );
+
+  useEffect(() => {
+    const handler = (e) => {
+      e.preventDefault();
+      deferredPrompt.current = e;
+      setCanInstall(true);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+
+    const installedHandler = () => setIsInstalled(true);
+    window.addEventListener('appinstalled', installedHandler);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('appinstalled', installedHandler);
+    };
+  }, []);
+
+  const promptInstall = async () => {
+    if (!deferredPrompt.current) return;
+    deferredPrompt.current.prompt();
+    const { outcome } = await deferredPrompt.current.userChoice;
+    if (outcome === 'accepted') setIsInstalled(true);
+    deferredPrompt.current = null;
+    setCanInstall(false);
+  };
+
+  return { canInstall, isInstalled, promptInstall };
+}
+
+function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function InstallSection({ canInstall, isInstalled, promptInstall }) {
+  const [showIOSGuide, setShowIOSGuide] = useState(false);
+
+  if (isInstalled) return null;
+
+  // Android / desktop Chrome — can trigger install directly
+  if (canInstall) {
+    return (
+      <button
+        onClick={promptInstall}
+        className="w-full py-3 rounded-[16px] text-sm font-light flex items-center justify-center gap-3"
+        style={{ background: 'rgba(255,255,255,0.08)' }}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-white/60">
+          <path d="M12 5v14M5 12l7 7 7-7" />
+        </svg>
+        <span className="text-white/80">Add to Home Screen</span>
+      </button>
+    );
+  }
+
+  // iOS — show instructions
+  if (isIOS()) {
+    return (
+      <div>
+        <button
+          onClick={() => setShowIOSGuide(!showIOSGuide)}
+          className="w-full py-3 rounded-[16px] text-sm font-light flex items-center justify-center gap-3"
+          style={{ background: 'rgba(255,255,255,0.08)' }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-white/60">
+            <path d="M12 5v14M5 12l7 7 7-7" />
+          </svg>
+          <span className="text-white/80">Add to Home Screen</span>
+        </button>
+        {showIOSGuide && (
+          <div className="mt-3 p-3 rounded-[12px] bg-white/5 text-xs text-gray-400 space-y-2">
+            <p>1. Tap the <strong className="text-white/70">Share</strong> button in Safari's toolbar</p>
+            <p>2. Scroll down and tap <strong className="text-white/70">Add to Home Screen</strong></p>
+            <p>3. Tap <strong className="text-white/70">Add</strong></p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return null;
+}
 
 export default function SettingsDrawer() {
   const { user, logout, loading } = useAuth();
   const [error, setError] = useState(null);
+  const install = useInstallPrompt();
 
   const handleGoogleSignIn = async () => {
     try {
@@ -30,61 +121,63 @@ export default function SettingsDrawer() {
     );
   }
 
-  if (user) {
-    return (
-      <div className="space-y-4 pt-2">
-        <div className="flex items-center gap-3">
-          {user.photoURL && (
-            <img
-              src={user.photoURL}
-              alt={user.displayName}
-              className="w-12 h-12 rounded-full"
-            />
-          )}
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-light text-white truncate">
-              {user.displayName || user.email}
-            </div>
-            <div className="text-xs text-gray-500 truncate">
-              {user.email}
-            </div>
-          </div>
-        </div>
-        <button
-          onClick={handleLogout}
-          className="w-full py-3 bg-red-500/20 text-red-400 rounded-[16px] text-sm font-light hover:bg-red-500/30 transition-colors"
-        >
-          Sign Out
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4 pt-2">
-      <div className="text-sm text-gray-400 text-center">
-        Sign in to sync history across devices
-      </div>
+      {user ? (
+        <>
+          <div className="flex items-center gap-3">
+            {user.photoURL && (
+              <img
+                src={user.photoURL}
+                alt={user.displayName}
+                className="w-12 h-12 rounded-full"
+              />
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-light text-white truncate">
+                {user.displayName || user.email}
+              </div>
+              <div className="text-xs text-gray-500 truncate">
+                {user.email}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="w-full py-3 bg-red-500/20 text-red-400 rounded-[16px] text-sm font-light hover:bg-red-500/30 transition-colors"
+          >
+            Sign Out
+          </button>
+        </>
+      ) : (
+        <>
+          <div className="text-sm text-gray-400 text-center">
+            Sign in to sync history across devices
+          </div>
 
-      {error && (
-        <div className="text-xs text-red-400 text-center bg-red-500/10 p-2 rounded-lg">
-          {error}
-        </div>
+          {error && (
+            <div className="text-xs text-red-400 text-center bg-red-500/10 p-2 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          <button
+            onClick={handleGoogleSignIn}
+            className="w-full py-3 rounded-[16px] text-sm font-light transition-colors flex items-center justify-center gap-3"
+            style={{ background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(8px)' }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            <span className="text-white/80">Sign in with Google</span>
+          </button>
+        </>
       )}
 
-      <button
-        onClick={handleGoogleSignIn}
-        className="w-full py-3 rounded-[16px] text-sm font-light transition-colors flex items-center justify-center gap-3"
-        style={{ background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(8px)' }}
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24">
-          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
-          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-        </svg>
-        <span className="text-white/80">Sign in with Google</span>
-      </button>
+      <InstallSection {...install} />
     </div>
   );
 }

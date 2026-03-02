@@ -12,11 +12,14 @@
   --glass-operator: linear-gradient(129.57deg, rgba(86, 226, 172, 0.403) 14.89%, rgba(86, 226, 172, 0.269) 126.12%);
 }
 
-body {
+html, body {
   margin: 0;
+  padding: 0;
   min-width: 320px;
-  min-height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   font-family: 'Inter', sans-serif;
+  -webkit-text-size-adjust: 100%;
 }
 
 button, a, input, select, [role="button"] {

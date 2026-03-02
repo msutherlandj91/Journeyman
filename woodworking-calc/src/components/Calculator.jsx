@@ -15,7 +15,7 @@ export default function Calculator({
   const isFraction = mode === 'fraction';
 
   const Button = ({ children, onClick, variant = 'number', disabled = false }) => {
-    const baseClasses = "w-[81px] h-[81px] rounded-[16px] flex items-center justify-center text-[28px] font-normal transition-all active:scale-95";
+    const baseClasses = "w-full aspect-square rounded-[16px] flex items-center justify-center text-[clamp(18px,6vw,28px)] font-normal transition-all active:scale-95";
 
     const variantStyles = {
       number: { background: 'var(--glass-number)', color: 'white' },
@@ -26,7 +26,7 @@ export default function Calculator({
     const style = variantStyles[variant] || variantStyles.number;
 
     return (
-      <div className="w-[97px] h-[97px] flex items-center justify-center">
+      <div className="flex-1 p-[2%] flex items-center justify-center">
         <button
           onClick={onClick}
           disabled={disabled}
@@ -46,10 +46,10 @@ export default function Calculator({
 
   // Ruler icon button showing current unit
   const RulerButton = () => (
-    <div className="w-[97px] h-[97px] flex items-center justify-center">
+    <div className="flex-1 p-[2%] flex items-center justify-center">
       <button
         onClick={onUnitToggle}
-        className="w-[81px] h-[81px] rounded-[16px] flex items-center justify-center transition-all active:scale-95"
+        className="w-full aspect-square rounded-[16px] flex items-center justify-center transition-all active:scale-95"
         style={{ background: 'var(--glass-modifier)', fontFamily: 'Inter, sans-serif' }}
       >
         <div className="flex flex-col items-center">
@@ -64,7 +64,7 @@ export default function Calculator({
   );
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center w-full">
       {/* Row 1: AC, Ruler, /, ÷ */}
       <div className="flex">
         <Button variant="modifier" onClick={onClear}>AC</Button>
