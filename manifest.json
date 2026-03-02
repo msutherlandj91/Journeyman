@@ -4,8 +4,8 @@
   "description": "Woodworking measurement calculator with fractions",
   "start_url": "/Journeyman/",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#FF9F0A",
+  "background_color": "#111111",
+  "theme_color": "#111111",
   "orientation": "portrait",
   "icons": [
     {
