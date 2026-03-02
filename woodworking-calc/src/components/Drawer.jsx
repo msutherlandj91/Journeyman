@@ -3,13 +3,13 @@ export default function Drawer({ isOpen, onClose, side = 'left', title, children
 
   return (
     <div
-      className={`fixed inset-0 z-50 transition-all duration-300 ${
+      className={`fixed inset-0 z-50 transition-all duration-[400ms] ${
         isOpen ? 'pointer-events-auto' : 'pointer-events-none'
       }`}
     >
       {/* Backdrop */}
       <div
-        className={`absolute inset-0 transition-opacity duration-300 ${
+        className={`absolute inset-0 transition-opacity duration-[400ms] ${
           isOpen ? 'bg-black/60' : 'bg-transparent'
         }`}
         onClick={onClose}
@@ -17,7 +17,7 @@ export default function Drawer({ isOpen, onClose, side = 'left', title, children
 
       {/* Panel */}
       <div
-        className={`absolute top-0 ${isLeft ? 'left-0' : 'right-0'} h-full w-[85vw] max-w-xs bg-[#1a1a1a]/95 backdrop-blur-xl flex flex-col transition-transform duration-300 ${
+        className={`absolute top-0 ${isLeft ? 'left-0' : 'right-0'} h-full w-[85vw] max-w-xs bg-[#1a1a1a]/95 backdrop-blur-xl flex flex-col transition-transform duration-[400ms] ${
           isOpen
             ? 'translate-x-0'
             : isLeft

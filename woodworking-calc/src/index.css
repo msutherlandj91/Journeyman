@@ -18,3 +18,7 @@ body {
   min-height: 100vh;
   font-family: 'Inter', sans-serif;
 }
+
+button, a, input, select, [role="button"] {
+  transition: all 0.4s ease;
+}
