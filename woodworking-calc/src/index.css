@@ -16,9 +16,10 @@ html, body {
   margin: 0;
   padding: 0;
   min-width: 320px;
-  height: 100dvh;
+  height: 100%;
   overflow: hidden;
   font-family: 'Inter', sans-serif;
+  background: #111111;
   -webkit-text-size-adjust: 100%;
 }
 

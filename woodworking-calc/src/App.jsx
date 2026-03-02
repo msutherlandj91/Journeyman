@@ -342,7 +342,7 @@ function App() {
 
   return (
     <div className="h-[100dvh] bg-[#111] flex items-center justify-center overflow-hidden">
-      <div className="w-full max-w-sm h-[100dvh] flex flex-col justify-between px-[7px] pb-[calc(12px+env(safe-area-inset-bottom,0px))]">
+      <div className="w-full max-w-sm h-[100dvh] flex flex-col justify-between px-[7px] pt-[env(safe-area-inset-top,0px)] pb-[calc(12px+env(safe-area-inset-bottom,0px))]">
         {/* Top: Menu bar */}
         <MenuBar
           showMetric={showMetric}
