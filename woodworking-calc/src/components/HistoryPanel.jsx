@@ -34,10 +34,14 @@ function formatAsFeetInches(totalInches, precision) {
   return `${sign}${feet}' ${inchStr}"`;
 }
 
-/**
- * History Panel Component
- * Shows persistent calculation history stored in localStorage
- */
+function formatRelativeTime(timestamp) {
+  const diff = Date.now() - timestamp;
+  if (diff < 60000) return 'just now';
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+  return `${Math.floor(diff / 86400000)}d ago`;
+}
+
 export default function HistoryPanel({ history, onClearHistory, onUseValue, precision }) {
   if (history.length === 0) {
     return (
@@ -59,7 +63,7 @@ export default function HistoryPanel({ history, onClearHistory, onUseValue, prec
       </div>
 
       <div className="space-y-1">
-        {history.slice().reverse().map((entry, i) => {
+        {history.slice().reverse().map((entry) => {
           const inches = parseFloat(entry.resultInches || entry.resultDecimal);
           const absInches = Math.abs(inches);
           const inchDisplay = `${formatInchValue(inches, precision || 16)}"`;
@@ -67,12 +71,13 @@ export default function HistoryPanel({ history, onClearHistory, onUseValue, prec
 
           return (
             <button
-              key={i}
+              key={entry.timestamp}
               onClick={() => onUseValue(entry.resultInches || entry.resultDecimal)}
               className="w-full text-right px-4 py-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
             >
-              <div className="text-xs text-gray-500">
-                {entry.expression}
+              <div className="flex items-center justify-between mb-0.5">
+                <span className="text-xs text-gray-600">{formatRelativeTime(entry.timestamp)}</span>
+                <span className="text-xs text-gray-500">{entry.expression}</span>
               </div>
               <div className="text-lg text-white font-light">
                 {inchDisplay}

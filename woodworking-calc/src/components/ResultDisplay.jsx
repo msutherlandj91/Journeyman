@@ -3,21 +3,11 @@ import {
   formatMixedNumber,
   isStandardDenominator,
   roundToStandardFraction,
-  toMixedNumber
+  toMixedNumber,
+  PRECISION
 } from '../utils/fractionUtils';
 
-const PRECISION = 32;
 const INCHES_TO_CM = 2.54;
-
-function formatExactFraction(inches) {
-  try {
-    const frac = parseFraction(Math.abs(inches));
-    const sign = inches < 0 ? '-' : '';
-    return sign + formatMixedNumber(frac, false);
-  } catch {
-    return String(inches);
-  }
-}
 
 function formatNearestFraction(inches) {
   try {
@@ -26,7 +16,7 @@ function formatNearestFraction(inches) {
     const sign = inches < 0 ? '-' : '';
 
     if (mixed.denominator === 1 || isStandardDenominator(mixed.denominator)) {
-      return null; // Already exact, no approximation needed
+      return null;
     }
 
     const rounded = roundToStandardFraction(frac, PRECISION);
@@ -49,12 +39,36 @@ function formatMetric(inches) {
   return `${cm.toFixed(2)} cm`;
 }
 
+function FractionDisplay({ inches }) {
+  try {
+    const absInches = Math.abs(inches);
+    const sign = inches < 0 ? '-' : '';
+    const frac = parseFraction(absInches);
+    const { whole, numerator, denominator } = toMixedNumber(frac);
+
+    if (numerator === 0) {
+      return <span className="text-[30px]">{sign}{whole}</span>;
+    } else if (whole === 0) {
+      return <span className="text-[20px]">{sign}{numerator}/{denominator}</span>;
+    } else {
+      return (
+        <>
+          <span className="text-[30px]">{sign}{whole}</span>
+          <span className="text-[20px]">-{numerator}/{denominator}</span>
+        </>
+      );
+    }
+  } catch {
+    return <span className="text-[30px]">{String(inches)}</span>;
+  }
+}
+
 export default function ResultDisplay({ displayValue, resultInches, expression, unit, showMetric }) {
   const numericValue = resultInches !== null ? resultInches : (parseFloat(displayValue) || 0);
   const unitSymbol = unit === 'ft' ? '\u2032' : '\u2033';
 
-  const exactFraction = numericValue !== 0 ? formatExactFraction(numericValue) : null;
-  const nearestFraction = numericValue !== 0 ? formatNearestFraction(numericValue) : null;
+  const showFraction = numericValue !== 0;
+  const nearestFraction = showFraction ? formatNearestFraction(numericValue) : null;
 
   // For metric, convert the value in inches
   const metricDisplay = showMetric && numericValue !== 0 ? formatMetric(numericValue) : null;
@@ -62,22 +76,11 @@ export default function ResultDisplay({ displayValue, resultInches, expression, 
   return (
     <div className="text-right px-4 py-4" style={{ fontFamily: "'Chivo Mono', monospace" }}>
       {/* Top row: exact and nearest fractions */}
-      {(exactFraction || nearestFraction) && (
+      {(showFraction || nearestFraction) && (
         <div className="flex items-center justify-end gap-3 mb-2">
-          {exactFraction && (
+          {showFraction && (
             <span className="text-white/80 text-xl font-normal">
-              {exactFraction.split(' ').length > 1 ? (
-                <>
-                  <span className="text-[30px]">{exactFraction.split('-')[0]}</span>
-                  {exactFraction.includes('-') && (
-                    <span className="text-[20px] ml-1">{exactFraction.split('-').slice(1).join('-')}</span>
-                  )}
-                </>
-              ) : exactFraction.includes('/') ? (
-                <span className="text-[20px]">{exactFraction}</span>
-              ) : (
-                <span className="text-[30px]">{exactFraction}</span>
-              )}
+              <FractionDisplay inches={numericValue} />
               <span className="text-[20px] text-white/50">{unitSymbol}</span>
             </span>
           )}

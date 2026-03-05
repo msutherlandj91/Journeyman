@@ -1,51 +1,35 @@
-export default function Calculator({
-  mode,
-  unit,
-  onNumberInput,
-  onOperation,
-  onClear,
-  onEquals,
-  onBackspace,
-  onUnitToggle,
-  onFractionSlash,
-  onFractionDash,
-  onDecimal,
-  currentOperation
-}) {
-  const isFraction = mode === 'fraction';
+const baseClasses = "w-full aspect-square rounded-[16px] flex items-center justify-center text-[clamp(18px,6vw,28px)] font-normal transition-all active:scale-95";
 
-  const Button = ({ children, onClick, variant = 'number', disabled = false }) => {
-    const baseClasses = "w-full aspect-square rounded-[16px] flex items-center justify-center text-[clamp(18px,6vw,28px)] font-normal transition-all active:scale-95";
+const variantStyles = {
+  number: { background: 'var(--glass-number)', color: 'white' },
+  modifier: { background: 'var(--glass-modifier)', color: 'white' },
+  operator: { background: 'var(--glass-operator)', color: 'white' },
+};
 
-    const variantStyles = {
-      number: { background: 'var(--glass-number)', color: 'white' },
-      modifier: { background: 'var(--glass-modifier)', color: 'white' },
-      operator: { background: 'var(--glass-operator)', color: 'white' },
-    };
+function CalcButton({ children, onClick, variant = 'number', disabled = false, active = false }) {
+  const base = variantStyles[variant] || variantStyles.number;
+  const style = active ? { background: 'white', color: '#111' } : base;
+  return (
+    <div className="p-[3px]">
+      <button
+        onClick={onClick}
+        disabled={disabled}
+        className={baseClasses}
+        style={{
+          ...style,
+          fontFamily: 'Inter, sans-serif',
+          opacity: disabled ? 0.25 : 1,
+          cursor: disabled ? 'default' : 'pointer',
+        }}
+      >
+        {children}
+      </button>
+    </div>
+  );
+}
 
-    const style = variantStyles[variant] || variantStyles.number;
-
-    return (
-      <div className="p-[3px]">
-        <button
-          onClick={onClick}
-          disabled={disabled}
-          className={baseClasses}
-          style={{
-            ...style,
-            fontFamily: 'Inter, sans-serif',
-            opacity: disabled ? 0.25 : 1,
-            cursor: disabled ? 'default' : 'pointer',
-          }}
-        >
-          {children}
-        </button>
-      </div>
-    );
-  };
-
-  // Ruler icon button showing current unit
-  const RulerButton = () => (
+function RulerButton({ onUnitToggle, unit }) {
+  return (
     <div className="p-[3px]">
       <button
         onClick={onUnitToggle}
@@ -62,48 +46,65 @@ export default function Calculator({
       </button>
     </div>
   );
+}
+
+export default function Calculator({
+  mode,
+  unit,
+  onNumberInput,
+  onOperation,
+  onClear,
+  onEquals,
+  onBackspace,
+  onUnitToggle,
+  onFractionSlash,
+  onFractionDash,
+  onDecimal,
+  currentOperation
+}) {
+  const isFraction = mode === 'fraction';
 
   return (
     <div className="grid grid-cols-4 w-full">
       {/* Row 1: AC, Ruler, /, ÷ */}
-      <Button variant="modifier" onClick={onClear}>AC</Button>
-      <RulerButton />
-      <Button
+      <CalcButton variant="modifier" onClick={onClear}>AC</CalcButton>
+      <RulerButton onUnitToggle={onUnitToggle} unit={unit} />
+      <CalcButton
         variant="number"
         onClick={isFraction ? onFractionSlash : undefined}
         disabled={!isFraction}
       >
         /
-      </Button>
-      <Button variant="operator" onClick={() => onOperation('÷')}>÷</Button>
+      </CalcButton>
+      <CalcButton variant="operator" active={currentOperation === '÷'} onClick={() => onOperation('÷')}>÷</CalcButton>
 
       {/* Row 2: 7, 8, 9, × */}
-      <Button onClick={() => onNumberInput(7)}>7</Button>
-      <Button onClick={() => onNumberInput(8)}>8</Button>
-      <Button onClick={() => onNumberInput(9)}>9</Button>
-      <Button variant="operator" onClick={() => onOperation('×')}>×</Button>
+      <CalcButton onClick={() => onNumberInput(7)}>7</CalcButton>
+      <CalcButton onClick={() => onNumberInput(8)}>8</CalcButton>
+      <CalcButton onClick={() => onNumberInput(9)}>9</CalcButton>
+      <CalcButton variant="operator" active={currentOperation === '×'} onClick={() => onOperation('×')}>×</CalcButton>
 
       {/* Row 3: 4, 5, 6, - */}
-      <Button onClick={() => onNumberInput(4)}>4</Button>
-      <Button onClick={() => onNumberInput(5)}>5</Button>
-      <Button onClick={() => onNumberInput(6)}>6</Button>
-      <Button variant="operator" onClick={() => onOperation('-')}>−</Button>
+      <CalcButton onClick={() => onNumberInput(4)}>4</CalcButton>
+      <CalcButton onClick={() => onNumberInput(5)}>5</CalcButton>
+      <CalcButton onClick={() => onNumberInput(6)}>6</CalcButton>
+      <CalcButton variant="operator" active={currentOperation === '-'} onClick={() => onOperation('-')}>−</CalcButton>
 
       {/* Row 4: 1, 2, 3, + */}
-      <Button onClick={() => onNumberInput(1)}>1</Button>
-      <Button onClick={() => onNumberInput(2)}>2</Button>
-      <Button onClick={() => onNumberInput(3)}>3</Button>
-      <Button variant="operator" onClick={() => onOperation('+')}>+</Button>
+      <CalcButton onClick={() => onNumberInput(1)}>1</CalcButton>
+      <CalcButton onClick={() => onNumberInput(2)}>2</CalcButton>
+      <CalcButton onClick={() => onNumberInput(3)}>3</CalcButton>
+      <CalcButton variant="operator" active={currentOperation === '+'} onClick={() => onOperation('+')}>+</CalcButton>
 
       {/* Row 5: 0, ./-, ⌫, = */}
-      <Button onClick={() => onNumberInput(0)}>0</Button>
+      <CalcButton onClick={() => onNumberInput(0)}>0</CalcButton>
       {isFraction ? (
-        <Button onClick={onFractionDash}>-</Button>
+        <CalcButton onClick={onFractionDash}>-</CalcButton>
       ) : (
-        <Button onClick={onDecimal}>.</Button>
+        <CalcButton onClick={onDecimal}>.</CalcButton>
       )}
-      <Button variant="modifier" onClick={onBackspace}>⌫</Button>
-      <Button variant="operator" onClick={onEquals}>=</Button>
+      <CalcButton variant="modifier" onClick={onBackspace}>⌫</CalcButton>
+      <CalcButton variant="operator" onClick={onEquals}>=</CalcButton>
     </div>
   );
 }

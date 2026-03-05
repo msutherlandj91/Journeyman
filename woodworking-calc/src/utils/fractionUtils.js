@@ -1,5 +1,7 @@
 import Fraction from 'fraction.js';
 
+export const PRECISION = 32;
+
 /**
  * Parse a mixed number string or individual parts into a Fraction object
  * @param {string|number} input - Can be "5 3/8", "5-3/8", "5.375", or just "5"

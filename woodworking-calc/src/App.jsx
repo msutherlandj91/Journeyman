@@ -9,9 +9,7 @@ import SettingsDrawer from './components/SettingsDrawer';
 import useLocalStorage from './hooks/useLocalStorage';
 import { useAuth } from './contexts/AuthContext';
 import { HistoryService } from './services/historyService';
-import { parseFraction, toMixedNumber, formatMixedNumber, roundToStandardFraction, isStandardDenominator } from './utils/fractionUtils';
-
-const PRECISION = 32;
+import { parseFraction, toMixedNumber, formatMixedNumber, roundToStandardFraction, isStandardDenominator, PRECISION } from './utils/fractionUtils';
 
 function App() {
   const { user, loading: authLoading } = useAuth();
@@ -198,7 +196,7 @@ function App() {
     } else if (operation) {
       const newInches = performOperation(storedInches, inputInInches, operation);
       setStoredInches(newInches);
-      setExpressionParts([...expressionParts, operation, `${displayValue}${unitSymbol}`]);
+      setExpressionParts(prev => [...prev, operation, `${displayValue}${unitSymbol}`]);
     }
 
     setWaitingForOperand(true);
@@ -219,6 +217,17 @@ function App() {
 
     loadHistory();
   }, [user]);
+
+  // Retry pending sync when connection is restored
+  useEffect(() => {
+    const handleOnline = () => {
+      if (historyServiceRef.current) {
+        historyServiceRef.current.retryPendingSync();
+      }
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, []);
 
   // On sign-in, merge local into cloud
   useEffect(() => {
@@ -254,7 +263,7 @@ function App() {
       };
 
       historyServiceRef.current.saveCalculation(entry);
-      setUnifiedHistory([...unifiedHistory, entry]);
+      setUnifiedHistory(prev => [...prev, entry]);
 
       setStoredInches(null);
       setOperation(null);
@@ -401,8 +410,10 @@ function App() {
             setUnifiedHistory([]);
           }}
           onUseValue={(value) => {
-            setDisplayValue(String(value));
-            setResultInches(parseFloat(value));
+            const inches = parseFloat(value);
+            const displayVal = unit === 'ft' ? String(inches / 12) : String(inches);
+            setDisplayValue(displayVal);
+            setResultInches(inches);
             setWaitingForOperand(true);
             setHistoryDrawerOpen(false);
           }}
